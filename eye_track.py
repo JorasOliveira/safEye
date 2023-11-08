@@ -1,70 +1,44 @@
+"""
+Demonstration of the GazeTracking library.
+Check the README.md for complete documentation.
+"""
+
 import cv2
-import numpy as np
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
+from gaze_tracking import GazeTracking
 
-def detect_faces(img):
-    gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    coords = face_cascade.detectMultiScale(gray_frame, 1.3, 5)
-    if len(coords) > 1:
-        biggest = (0, 0, 0, 0)
-        for i in coords:
-            if i[3] > biggest[3]:
-                biggest = i
-        biggest = np.array([i], np.int32)
-    elif len(coords) == 1:
-        biggest = coords
-    else:
-        return None
-    for (x, y, w, h) in biggest:
-        frame = img[y:y + h, x:x + w]
-    return frame
+gaze = GazeTracking()
+webcam = cv2.VideoCapture(0)
 
-def detect_eyes(img):
-    gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    eyes = eye_cascade.detectMultiScale(gray_frame, 1.3, 5) # detect eyes
-    width = np.size(img, 1) # get face frame width
-    height = np.size(img, 0) # get face frame height
-    left_eye = None
-    right_eye = None
-    for (x, y, w, h) in eyes:
-        if y > height / 2:
-            pass
-        eyecenter = x + w / 2  # get the eye center
-        if eyecenter < width * 0.5:
-            left_eye = img[y:y + h, x:x + w]
-        else:
-            right_eye = img[y:y + h, x:x + w]
-    return left_eye, right_eye
+while True:
+    # We get a new frame from the webcam
+    _, frame = webcam.read()
 
-img = cv2.imread("img/joras1.jpeg")
-face = detect_faces(img)
+    # We send this frame to GazeTracking to analyze it
+    gaze.refresh(frame)
 
-left_eye, right_eye = detect_eyes(face)
+    frame = gaze.annotated_frame()
+    text = ""
 
-threshold = 60
-_, left_eye = cv2.threshold(cv2.cvtColor(left_eye, cv2.COLOR_BGR2GRAY), threshold, 255, cv2.THRESH_BINARY)
-_, right_eye = cv2.threshold(cv2.cvtColor(right_eye, cv2.COLOR_BGR2GRAY), threshold, 255, cv2.THRESH_BINARY)
+    if gaze.is_blinking():
+        text = "Blinking"
+    elif gaze.is_right():
+        text = "Looking right"
+    elif gaze.is_left():
+        text = "Looking left"
+    elif gaze.is_center():
+        text = "Looking center"
 
-def cut_eyebrows(img):
-    height, width = img.shape[:2]
-    eyebrow_h = int(height / 4)
-    img = img[eyebrow_h:height, 0:width]  # cut eyebrows out (15 px)
-    return img
+    cv2.putText(frame, text, (90, 60), cv2.FONT_HERSHEY_DUPLEX, 1.6, (147, 58, 31), 2)
 
-left_eye = cut_eyebrows(left_eye)
-right_eye = cut_eyebrows(right_eye)
+    left_pupil = gaze.pupil_left_coords()
+    right_pupil = gaze.pupil_right_coords()
+    cv2.putText(frame, "Left pupil:  " + str(left_pupil), (90, 130), cv2.FONT_HERSHEY_DUPLEX, 0.9, (147, 58, 31), 1)
+    cv2.putText(frame, "Right pupil: " + str(right_pupil), (90, 165), cv2.FONT_HERSHEY_DUPLEX, 0.9, (147, 58, 31), 1)
 
-# def blob_process(img, detector):
-#     gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#     _, img = cv2.threshold(gray_frame, 42, 255, cv2.THRESH_BINARY)
-#     keypoints = detector.detect(img)
-#     return keypoints
-# keypoints = blob_process(face, detect_eyes)
-# cv2.drawKeypoints(eye, keypoints, eye, (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    cv2.imshow("Demo", frame)
 
-cv2.imshow('face',face)
-cv2.imshow('left eye',left_eye)
-cv2.imshow('right eye',right_eye)
-cv2.waitKey(0)
+    if cv2.waitKey(1) == 27:
+        break
+   
+webcam.release()
 cv2.destroyAllWindows()
