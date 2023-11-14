@@ -1,46 +1,106 @@
-import face_recognition
 import cv2
+import numpy as np
 from gaze_tracking import GazeTracking
+import os 
+
+#facial recognition
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+recognizer.read('face_rec/trainer/trainer.yml')
+cascadePath = "face_rec/cascades/haarcascade_frontalface_default.xml"
+faceCascade = cv2.CascadeClassifier(cascadePath)
+font = cv2.FONT_HERSHEY_SIMPLEX
+#iniciate id counter
+id = 0
+# names related to ids: example ==> Marcelo: id=1,  etc
+names = ['None', 'Matheus'] 
+# Initialize and start realtime video capture
+cam = cv2.VideoCapture(0)
+cam.set(3, 640) # set video widht
+cam.set(4, 480) # set video height
+# Define min window size to be recognized as a face
+minW = 0.1*cam.get(3)
+minH = 0.1*cam.get(4)
+
+
+#gaze tracking
 gaze = GazeTracking()
-from time import time
+webcam = cv2.VideoCapture(0)
 
-start = time()
+WIN = 'Example'
 
-known_image = face_recognition.load_image_file("img/mat1.jpeg")
-matheus_encoding = face_recognition.face_encodings(known_image)[0]
+cv2.namedWindow(WIN)
 
-known_image_time = time()
+while cv2.getWindowProperty(WIN, cv2.WND_PROP_VISIBLE):
+    # We get a new frame from the webcam
+    _, frame = webcam.read()
+    og_frame = frame.copy()
 
-mat = face_recognition.load_image_file("img/mat2.jpeg")
-mat_encoding = face_recognition.face_encodings(mat)[0]
-mat_results = face_recognition.compare_faces([matheus_encoding], mat_encoding)
 
-end_mat = time()
+    #facial recognition
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    faces = faceCascade.detectMultiScale( 
+        gray,
+        scaleFactor = 1.2,
+        minNeighbors = 5,
+        minSize = (int(minW), int(minH)),
+    )
+    for(x,y,w,h) in faces:
+        cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2)
+        id, confidence = recognizer.predict(gray[y:y+h,x:x+w])
+        
+        # If confidence is less then 100 ==> "0" : perfect match 
+        if (confidence < 100):
+            id = names[id]
+            confidence = "  {0}%".format(round(100 - confidence))
+        else:
+            id = "unknown"
+            confidence = "  {0}%".format(round(100 - confidence))
+        
+        cv2.putText(frame, str(id), (x+5,y-5), font, 1, (255,255,255), 2)
+        cv2.putText(frame, str(confidence), (x+5,y+h-5), font, 1, (255,255,0), 1)
+    
 
-joras = face_recognition.load_image_file("img/joras1.jpeg")
-joras_encoding = face_recognition.face_encodings(joras)[0]
-joras_results = face_recognition.compare_faces([matheus_encoding], joras_encoding)
+    #gaze Tracking
+    # We send this frame to GazeTracking to analyze it
+    gaze.refresh(frame)
 
-end = time()
+    frame = gaze.annotated_frame()
+    text = ""
 
-gaze.refresh(joras)
-frame = gaze.annotated_frame()
+    if gaze.is_blinking():
+        text = "Blinking"
+    elif gaze.is_right():
+        text = "Looking right"
+    elif gaze.is_left():
+        text = "Looking left"
+    elif gaze.is_center():
+        text = "Looking center"
 
-text = ""
+    cv2.putText(frame, text, (90, 60), cv2.FONT_HERSHEY_DUPLEX, 1.6, (147, 58, 31), 2)
 
-if gaze.is_blinking():
-    text = "Blinking"
-elif gaze.is_right():
-    text = "Looking right"
-elif gaze.is_left():
-    text = "Looking left"
-elif gaze.is_center():
-    text = "Looking center"
+    left_pupil = gaze.pupil_left_coords()
+    right_pupil = gaze.pupil_right_coords()
+    cv2.putText(frame, "Left pupil:  " + str(left_pupil), (90, 130), cv2.FONT_HERSHEY_DUPLEX, 0.9, (147, 58, 31), 1)
+    cv2.putText(frame, "Right pupil: " + str(right_pupil), (90, 165), cv2.FONT_HERSHEY_DUPLEX, 0.9, (147, 58, 31), 1)
+    #cv2.imshow("Demo", frame)
 
-print("É o Matheus." if mat_results[0] else "Não é o Matheus.")
-print("É o Matheus." if joras_results[0] else "Não é o Matheus.")
-print("O joras esta olhando para: " + text)
-print(f"Tempo de execução: {end - start} segundos.")
-print(f"Tempo de execução da primeira imagem: {known_image_time - start} segundos.")
-print(f"Tempo de execução da segunda imagem: {end_mat - known_image_time} segundos.")
-print(f"Tempo de execução da terceira imagem: {end - end_mat} segundos.")
+    #creating the double frame
+    height, width, num_channels = frame.shape
+    image = np.empty((height, 2 * width, num_channels), frame.dtype)
+    image[:, :width] = og_frame
+    image[:, width:] = frame
+    
+    if cv2.waitKey(1) == 32:
+        image[:, :width] = frame
+
+
+    if cv2.waitKey(1) == 27:
+        break
+
+    cv2.imshow(WIN, image)
+
+
+
+webcam.release()
+cv2.destroyAllWindows()
