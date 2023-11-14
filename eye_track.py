@@ -47,12 +47,17 @@ while cv2.getWindowProperty(WIN, cv2.WND_PROP_VISIBLE):
     image = np.empty((height, 2 * width, num_channels), frame.dtype)
     image[:, :width] = og_frame
     image[:, width:] = frame
-    # if cv2.waitKey(1) == 32:
-    #     image[:, width:] = og_frame
-    cv2.imshow(WIN, image)
+    
+    if cv2.waitKey(1) == 32:
+        image[:, :width] = frame
+
 
     if cv2.waitKey(1) == 27:
         break
+
+    cv2.imshow(WIN, image)
+
+
 
 webcam.release()
 cv2.destroyAllWindows()
