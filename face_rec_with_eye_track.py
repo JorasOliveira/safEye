@@ -14,17 +14,16 @@ id = 0
 # names related to ids: example ==> Marcelo: id=1,  etc
 names = ['None', 'Matheus'] 
 # Initialize and start realtime video capture
-cam = cv2.VideoCapture(0)
-cam.set(3, 640) # set video widht
-cam.set(4, 480) # set video height
-# Define min window size to be recognized as a face
-minW = 0.1*cam.get(3)
-minH = 0.1*cam.get(4)
+webcam = cv2.VideoCapture(0)
+# webcam.set(3, 640) # set video widht
+# webcam.set(4, 480) # set video height
+# # Define min window size to be recognized as a face
+minW = 0.1*webcam.get(3)
+minH = 0.1*webcam.get(4)
 
 
 #gaze tracking
 gaze = GazeTracking()
-webcam = cv2.VideoCapture(0)
 
 WIN = 'Example'
 
