@@ -42,6 +42,12 @@ class GazeTracking(object):
     def _analyze(self, frame):
         """Detects the face and initialize Eye objects"""
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        minimum = frame.min()
+        maximum = frame.max()
+
+        adjusted_frame = (255) * (frame - minimum) / (maximum - minimum)
+        cv2.imwrite("img/adjusted_frame.jpeg", adjusted_frame)
         # frame = self.frame
         faces = self._face_detector(frame)
 
@@ -100,12 +106,12 @@ class GazeTracking(object):
     def is_right(self):
         """Returns true if the user is looking to the right"""
         if self.pupils_located:
-            return self.horizontal_ratio() <= 0.35
+            return self.horizontal_ratio() <= 0.45 #changing this threshold changes the sensitivity, original value is 0.35
 
     def is_left(self):
         """Returns true if the user is looking to the left"""
         if self.pupils_located:
-            return self.horizontal_ratio() >= 0.65
+            return self.horizontal_ratio() >= 0.75 #same here, original value is 0.65
 
     def is_center(self):
         """Returns true if the user is looking to the center"""
