@@ -28,6 +28,8 @@ def echo(socket):
         output_image = process(input_image)
         _, output_array = cv2.imencode('.png', output_image)
         output_data = output_array.tobytes()
+        # output_data = output_image.tobytes()
+        # output_data = output_image
         socket.send(output_data)
 
 def process(image):
@@ -58,6 +60,7 @@ def process(image):
         # We get a new frame from the webcam
         frame = image #webcam.read()
         og_frame = frame.copy()
+        output = ""
 
 
         #facial recognition
@@ -77,10 +80,15 @@ def process(image):
             # If confidence is less then 100 ==> "0" : perfect match 
             if (confidence < 100):
                 id = names[id]
+                
                 confidence = "  {0}%".format(round(100 - confidence))
+
+                output += id + " confidence: " + confidence + "%\n"
             else:
                 id = "unknown"
                 confidence = "  {0}%".format(round(100 - confidence))
+
+                output += id + " confidence: " + confidence + "%\n"
             
             cv2.putText(frame, str(id), (x+5,y-5), font, 1, (255,255,255), 2)
             cv2.putText(frame, str(confidence), (x+5,y+h-5), font, 1, (255,255,0), 1)
@@ -106,6 +114,8 @@ def process(image):
         elif gaze.is_center():
             text = "Looking center"
 
+        output += text + "\n"
+
         cv2.putText(frame, text, (90, 60), cv2.FONT_HERSHEY_DUPLEX, 1.6, (147, 58, 31), 2)
 
         left_pupil = gaze.pupil_left_coords()
@@ -120,14 +130,16 @@ def process(image):
         image[:, :width] = og_frame
         image[:, width:] = frame
         
-        if cv2.waitKey(1) == 32:
-            image[:, :width] = frame
+        # if cv2.waitKey(1) == 32:
+        #     image[:, :width] = frame
 
-        if cv2.waitKey(1) == 27:
-            break
+        # if cv2.waitKey(1) == 27:
+        #     break
 
         # cv2.imshow(WIN, image)
-        return image
+        return frame
+        # text = id, #confidencen, /n, text, /n
+        # return text
 
     cv2.destroyAllWindows()
 
