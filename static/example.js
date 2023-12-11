@@ -1,10 +1,10 @@
-const FPS = 5;
+const FPS = 20;
 
 const inputCanvas = document.createElement('canvas');
 const inputContext = inputCanvas.getContext('2d');
 
-const outputCanvas = document.querySelector('canvas');
-const outputContext = outputCanvas.getContext('2d');
+const output = document.querySelector('h1');
+const direction = document.querySelector('h2');
 
 const video = document.querySelector('video');
 
@@ -28,15 +28,16 @@ async function main() {
     inputCanvas.width = width;
     inputCanvas.height = height;
 
-    outputCanvas.width = width;
-    outputCanvas.height = height;
-
     video.srcObject = stream;
 
     socket.addEventListener('message', async (event) => {
         const outputData = event.data;
-        const bitmap = await createImageBitmap(outputData);
-        outputContext.drawImage(bitmap, 0, 0);
+        text = await outputData.text();
+        if (text.slice(0, 1) == "0") {
+            output.innerHTML = text.slice(1);
+        } else if (text.slice(0, 1) == "1") {
+            direction.innerHTML = text.slice(1);
+        }
     });
 
     setInterval(async () => {
